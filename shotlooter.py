@@ -18,7 +18,6 @@
 import requests
 from bs4 import BeautifulSoup
 import string
-import argparse as parser
 from PIL import Image
 import pytesseract
 import re
@@ -171,7 +170,7 @@ def action(code,imagedir,no_entropy,no_cc,no_keyword):
             get_img(url, img_path)
             print("Analyzing: " +code)
             image_text = pytesseract.image_to_string(Image.open(img_path+".png"))
-            if no_keyword is None:
+            if not no_keyword:
                 for word in keywords:
                     if word.lower() in image_text.lower():
                         print(colored("Keyword Match: " + word,"green"))
@@ -181,7 +180,7 @@ def action(code,imagedir,no_entropy,no_cc,no_keyword):
                         flag = True
             image_words = image_text.split()
             for word in image_words:
-                if no_cc is None:
+                if not no_cc:
                     if hasNumbers(word):
                         number = numbers.findall(word)
                         if is_valid_cc(number[0]):
@@ -190,14 +189,14 @@ def action(code,imagedir,no_entropy,no_cc,no_keyword):
                                 f.write("credit_card,"+number[0]+","+code)
                                 f.write("\n")
                             flag = True
-                if no_entropy is None:
+                if not no_entropy:
                     if entropy(unicodedata.normalize('NFKD', word).encode('ascii','ignore').decode('utf-8')) >= 4.5 and "http" not in word and "/" not in word and len(word) < 65:
                         print(colored("High Entropy Detected: " + word,"magenta"))
                         with open("findings.csv","a+") as f:
                             f.write("entropy,"+word+","+code)
                             f.write("\n")
                         flag = True
-            if imagedir is not None:
+            if imagedir:
                 files = [f for f in listdir(imagedir) if isfile(join(imagedir, f))]
                 for file in files:
                     if ".png" in file or ".jpg" in file:
@@ -218,17 +217,9 @@ signal(SIGINT, handler)
 parser = argparse.ArgumentParser()
 parser.add_argument('--code', action='store', dest='code', help='Start code for prnt.sc', required=True)
 parser.add_argument('--imagedir', action='store', dest='imagedir', help='Image directory for logo search', default=None)
-parser.add_argument('--no-entropy', action='store_true', dest='no_entropy', help="Don't search for high entropy", default=None)
-parser.add_argument('--no-cc', action='store_true', dest='no_cc', help="Don't search for credit card", default=None)
-parser.add_argument('--no-keyword', action='store_true', dest='no_keyword', help="Don't search for keywords", default=None)
+parser.add_argument('--no-entropy', action='store_true', dest='no_entropy', help="Don't search for high entropy", default=False)
+parser.add_argument('--no-cc', action='store_true', dest='no_cc', help="Don't search for credit card", default=False)
+parser.add_argument('--no-keyword', action='store_true', dest='no_keyword', help="Don't search for keywords", default=False)
 argv = parser.parse_args()
-
-
-if argv.no_entropy:
-    argv.no_entropy = True
-if argv.no_cc:
-    argv.no_cc = True
-if argv.no_keyword:
-    argv.no_keyword = True
 
 action(argv.code,argv.imagedir,argv.no_entropy,argv.no_cc,argv.no_keyword)
